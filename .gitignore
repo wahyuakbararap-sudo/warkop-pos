@@ -1,16 +1,23 @@
+# Dependencies
 node_modules
-dist
-build
+
+# Environment
 .env
+.env.local
+.env.production
 
-client/node_modules
-server/node_modules
+# Build
+dist
+.next
 
-client/dist
-server/dist
-
-.vscode
-
-coverage
-
+# System
+.DS_Store
+Thumbs.db
 *.log
+
+# Uploads
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Prisma
+server/prisma/migrations
