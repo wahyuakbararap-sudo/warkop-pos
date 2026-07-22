@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+//  ENUMS
+// ============================================================
+
+enum Role {
+  OWNER
+  ADMIN
+  KASIR
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  QRIS
+  DEBIT
+  TRANSFER
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+}
+
+// ============================================================
+//  BRANCH (Cabang)
+// ============================================================
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+
+  users     User[]
+  tables    Table[]
+  menus     Menu[]
+  orders    Order[]
+  inventory InventoryItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+//  USER
+// ============================================================
+
+model User {
+  id       String @id @default(cuid())
+  name     String
+  username String @unique
+  password String
+  role     Role   @default(KASIR)
+  isActive Boolean @default(true)
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id])
+
+  orders     Order[]
+  activities ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+//  KATEGORI
+// ============================================================
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+
+  menus Menu[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+//  MENU
+// ============================================================
+
+model Menu {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Int
+  image       String?
+  isAvailable Boolean  @default(true)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id])
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+//  MEJA
+// ============================================================
+
+model Table {
+  id     String      @id @default(cuid())
+  number Int
+  name   String?
+  status TableStatus @default(AVAILABLE)
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([number, branchId])
+}
+
+// ============================================================
+//  ORDER
+// ============================================================
+
+model Order {
+  id        String      @id @default(cuid())
+  orderCode String      @unique
+  status    OrderStatus @default(PENDING)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  tableId String?
+  table   Table? @relation(fields: [tableId], references: [id])
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  customerName String?
+  notes        String?
+
+  items   OrderItem[]
+  payment Payment?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FIX: Index buat query order aktif lebih cepat
+  @@index([status, createdAt])
+  @@index([tableId, status])
+  @@index([branchId, createdAt])
+}
+
+// ============================================================
+//  ORDER ITEM
+// ============================================================
+
+model OrderItem {
+  id       String @id @default(cuid())
+  quantity Int
+  price    Int
+  subtotal Int
+
+  orderId String
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  menuId String
+  menu   Menu @relation(fields: [menuId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([menuId])
+}
+
+// ============================================================
+//  PAYMENT
+// ============================================================
+
+model Payment {
+  id     String        @id @default(cuid())
+  amount Int
+  method PaymentMethod @default(CASH)
+  status PaymentStatus @default(UNPAID)
+  paidAt DateTime?
+
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  receivedAmount Int?
+  changeAmount   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+}
+
+// ============================================================
+//  INVENTORY
+// ============================================================
+
+model InventoryItem {
+  id        String @id @default(cuid())
+  name      String
+  unit      String
+  quantity  Float  @default(0)
+  minStock  Float  @default(0)
+  price     Int?
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId])
+}
+
+// ============================================================
+//  ACTIVITY LOG
+// ============================================================
+
+model ActivityLog {
+  id     String @id @default(cuid())
+  action String
+  detail String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
