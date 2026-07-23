@@ -33,7 +33,7 @@ router.get(
         select: {
           id: true,
           name: true,
-          email: true,
+          username: true,
           role: true,
           isActive: true,
           createdAt: true,
@@ -60,7 +60,7 @@ router.get(
     try {
       const logs = await prisma.activityLog.findMany({
         include: {
-          user: { select: { name: true, email: true, role: true } },
+          user: { select: { name: true, username: true, role: true } },
         },
         orderBy: { createdAt: "desc" },
         take: 50,

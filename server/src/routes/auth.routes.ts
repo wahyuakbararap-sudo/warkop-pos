@@ -12,22 +12,22 @@ const router = Router();
 
 router.post("/register", async (req: Request, res: Response) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, username, password, role } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !username || !password) {
       res.status(400).json({
         success: false,
-        message: "Nama, email, dan password wajib diisi",
+        message: "Nama, user, dan password wajib diisi",
       });
       return;
     }
 
-    const exists = await prisma.user.findUnique({ where: { email } });
+    const exists = await prisma.user.findUnique({ where: { username } });
 
     if (exists) {
       res.status(409).json({
         success: false,
-        message: "Email sudah terdaftar",
+        message: "Username sudah terdaftar",
       });
       return;
     }
@@ -37,7 +37,7 @@ router.post("/register", async (req: Request, res: Response) => {
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        username,
         password: hashed,
         role: role || "KASIR",
       },
@@ -46,7 +46,7 @@ router.post("/register", async (req: Request, res: Response) => {
     await prisma.activityLog.create({
       data: {
         action: "USER_REGISTER",
-        detail: `User ${user.name} (${user.email}) terdaftar sebagai ${user.role}`,
+        detail: `User ${user.name} (${user.username}) terdaftar sebagai ${user.role}`,
         userId: user.id,
       },
     });
@@ -57,7 +57,7 @@ router.post("/register", async (req: Request, res: Response) => {
       data: {
         id: user.id,
         name: user.name,
-        email: user.email,
+        username: user.username,
         role: user.role,
       },
     });
@@ -75,9 +75,9 @@ router.post("/register", async (req: Request, res: Response) => {
 
 router.post("/login", async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!email || !password) {
+    if (!username || !password) {
       res.status(400).json({
         success: false,
         message: "Email dan password wajib diisi",
@@ -85,7 +85,7 @@ router.post("/login", async (req: Request, res: Response) => {
       return;
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { username } });
 
     if (!user) {
       res.status(401).json({
@@ -114,7 +114,7 @@ router.post("/login", async (req: Request, res: Response) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, username: user.username, role: user.role },
       process.env.JWT_SECRET!,
       { expiresIn: "7d" }
     );
@@ -122,7 +122,7 @@ router.post("/login", async (req: Request, res: Response) => {
     await prisma.activityLog.create({
       data: {
         action: "USER_LOGIN",
-        detail: `User ${user.name} (${user.email}) login`,
+        detail: `User ${user.name} (${user.username}) login`,
         userId: user.id,
       },
     });
@@ -135,7 +135,7 @@ router.post("/login", async (req: Request, res: Response) => {
         user: {
           id: user.id,
           name: user.name,
-          email: user.email,
+          username: user.username,
           role: user.role,
         },
       },
@@ -185,7 +185,7 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
       select: {
         id: true,
         name: true,
-        email: true,
+        username: true,
         role: true,
         isActive: true,
         createdAt: true,
